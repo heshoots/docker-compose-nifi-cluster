@@ -1,0 +1,71 @@
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    nifi.service: zookeeper
+  name: zookeeper
+spec:
+  type: NodePort
+  ports:
+  - name: zookeeper
+    port: 2181
+    targetPort: 2181
+  selector:
+    nifi.service: zookeeper
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  labels:
+    nifi.service: zookeeper
+  name: zookeeper
+spec:
+  containers:
+  - name: zookeeper
+    image: zookeeper
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    nifi.service: worker
+  name: worker
+spec:
+  type: NodePort
+  ports:
+  - name: webport
+    port: 8080
+    targetPort: 8080
+  - name: inhttp
+    port: 9001
+    targetPort: 9001
+  selector:
+    nifi.service: worker
+---
+apiVersion: apps/v1beta2
+kind: Deployment
+metadata:
+  labels:
+    nifi.service: worker
+  name: nifideploy
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nifi
+  template:
+    metadata:
+      labels:
+        app: nifi
+        nifi.service: worker
+    spec:
+      containers:
+      - name: worker
+        image: quorauk/nifiworker:v0.0.2
+        imagePullPolicy: Always
+        readinessProbe:
+          httpGet:
+            path: /nifi
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
