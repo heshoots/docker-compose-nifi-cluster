@@ -1,64 +1,78 @@
-# docker-compose-nifi-cluster
-A Docker Compose files to compose a NiFi cluster on Docker.
-
-The master branch uses the latest NiFi version (1.0).
-For older version, use following branches:
-
-- [0.x](https://github.com/ijokarumawak/docker-compose-nifi-cluster/tree/0.x): NCM and 2 nodes cluster.
+# kubernetes-nifi-cluster
+Kubernetes to create a NiFi cluster.
 
 ## Prerequisite
 
-You need docker, docker-machine and docker-compose. For example, in my environment I have these versions.
+You need kubectl, and a kubernetes cluster. For example, in my environment I have these versions.
 
 ```Shell
+$ kubectl version
+Client Version: version.Info{Major:"1", Minor:"8", GitVersion:"v1.8.0", GitCommit:"6e937839ac04a38cac63e6a7a306c5d035fe7b0a", GitTreeState:"clean", BuildDate:"2017-09-28T22:57:57Z", GoVersion:"go1.8.3", Compiler:"gc", Platform:"linux/amd64"}
+Server Version: version.Info{Major:"1", Minor:"8", GitVersion:"v1.8.0", GitCommit:"0b9efaeb34a2fc51ff8e4d34ad9bc6375459c4a4", GitTreeState:"dirty", BuildDate:"2017-10-17T15:09:55Z", GoVersion:"go1.8.3", Compiler:"gc", Platform:"linux/amd64"}
+
+$ minikube version
+minikube version: v0.22.1
+
 $ docker -v
-Docker version 1.12.1, build 6f9534c
-
-$ docker-machine -v
-docker-machine version 0.8.1, build 41b3b25
-
-$ docker-compose -v
-docker-compose version 1.8.0, build f3628c7
+Docker version 17.09.0-ce, build afdb6d4
 ```
 
 ## How to use
 
 ```Shell
 # Clone this repository
-$ git@github.com:ijokarumawak/docker-compose-nifi-cluster.git
-$ cd docker-compose-nifi-cluster
+$ git@github.com:heshoots/kubernetes-nifi-cluster.git
+$ cd kubernetes-nifi-cluster
 
 # To start nifi cluster
-$ docker-compose up -d
+$ kubectl create -f deployment.yaml
 
 # Wait few minutes for NiFi to unpack nars and the nodes recognized eachother.
-# Then access to the seed node's url through docker-machine vm
-$ docker-machine ip
-192.168.99.100
+# Then access the load balancer url through minikube
+$ minikube service --url worker
+http://192.168.99.100:31004
+http://192.168.99.100:31640
 
-http://192.168.99.100:8080/nifi/
+http://192.168.99.100:31004/nifi/
 
-# You may need to add routing by a command something like this:
-$ sudo route add -net 172.17.0.0 `docker-machine ip`
+# View pods
+$ kubectl get pods
+NAME                          READY     STATUS    RESTARTS   AGE
+nifideploy-5f47b59997-ndmm6   1/1       Running   0          1m
+nifideploy-5f47b59997-qbgrg   1/1       Running   0          1m
+zookeeper                     1/1       Running   0          1m
+
+# View services
+$ kubectl get svc
+NAME         TYPE        CLUSTER-IP   EXTERNAL-IP   PORT(S)                         AGE
+kubernetes   ClusterIP   10.0.0.1     <none>        443/TCP                         23d
+worker       NodePort    10.0.0.228   <none>        8080:31004/TCP,9001:31640/TCP   9m
+zookeeper    NodePort    10.0.0.192   <none>        2181:30542/TCP                  9m
 
 # View logs or container status
-$ docker-compose logs -f
-$ docker exec nifi-cluster-seed tail -f logs/nifi-app.log
-$ docker-compose ps
+$ kubectl log -f nifideploy-5f47b59997-ndmm6
+$ kubectl log -f zookeeper
+$ docker exec nifideploy-5f47b59997-ndmm6 tail -f logs/nifi-app.log
 
-# Scale number of nodes (seed + n)
-$ docker-compose scale nifi-nodes=2
+# Scale number of nodes
+$ kubectl scale deployment --replicas=n nifideploy
 
 # Dispose the cluster
-$ docker-compose down
+$ kubectl delete svc zookeeper
+$ kubectl delete svc worker
+$ kubectl delete pod zookeeper
+$ kubectl delete deployment nifideploy
 
 # To rebuild nifi-node docker image
-$ docker-compose build
+$ cd nifi-node
+$ docker build -t quorauk/nifiworker:v0.0.2
 ```
 
 ## Special thanks
 
 I used [mkobit/nifi](https://github.com/mkobit/docker-nifi) as a base image. Thanks for sharing the image and maintaining it up to date!
+I used [ijokarumawak/docker-compose-nifi-cluster](https://github.com/ijokarumawak/docker-compose-nifi-cluster) as a starter and repo template. Very helpful for getting started in understanding nifi clustering
+I also found the [guide](https://community.hortonworks.com/articles/68375/nifi-cluster-and-load-balancer.html) useful as well.
 
 ## Screen shot
 
