@@ -71,7 +71,9 @@ $ docker build -t quorauk/nifiworker:v0.0.2
 ## Special thanks
 
 I used [mkobit/nifi](https://github.com/mkobit/docker-nifi) as a base image. Thanks for sharing the image and maintaining it up to date!
+
 I used [ijokarumawak/docker-compose-nifi-cluster](https://github.com/ijokarumawak/docker-compose-nifi-cluster) as a starter and repo template. Very helpful for getting started in understanding nifi clustering
+
 I also found the [guide](https://community.hortonworks.com/articles/68375/nifi-cluster-and-load-balancer.html) useful as well.
 
 ## Screen shot
